@@ -3,13 +3,17 @@ package ru.geekbrains.server;
 import ru.geekbrains.client.AuthException;
 import ru.geekbrains.client.TextMessage;
 import ru.geekbrains.server.auth.AuthService;
-import ru.geekbrains.server.auth.AuthServiceImpl;
+import ru.geekbrains.server.auth.AuthServiceJdbcImpl;
+import ru.geekbrains.server.persistance.UserRepository;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.*;
 
 import static ru.geekbrains.client.MessagePatterns.AUTH_FAIL_RESPONSE;
@@ -17,12 +21,27 @@ import static ru.geekbrains.client.MessagePatterns.AUTH_SUCCESS_RESPONSE;
 
 public class ChatServer {
 
-    private AuthService authService = new AuthServiceImpl();
+    private AuthService authService;
     private Map<String, ClientHandler> clientHandlerMap = Collections.synchronizedMap(new HashMap<>());
 
     public static void main(String[] args) {
-        ChatServer chatServer = new ChatServer();
+        AuthService authService;
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/network_chat",
+                    "root", "root");
+            UserRepository userRepository = new UserRepository(conn);
+            authService = new AuthServiceJdbcImpl(userRepository);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        ChatServer chatServer = new ChatServer(authService);
         chatServer.start(7777);
+    }
+
+    public ChatServer(AuthService authService) {
+        this.authService = authService;
     }
 
     private void start(int port) {
@@ -70,7 +89,7 @@ public class ChatServer {
             System.out.printf("Incorrect authorization message %s%n", authMessage);
             throw new AuthException();
         }
-        return new User(authParts[1], authParts[2]);
+        return new User(-1, authParts[1], authParts[2]);
     }
 
     private void sendUserConnectedMessage(String login) throws IOException {
