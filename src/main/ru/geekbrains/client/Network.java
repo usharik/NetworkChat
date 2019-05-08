@@ -110,4 +110,16 @@ public class Network implements Closeable {
         this.receiverThread.interrupt();
         sendMessage(DISCONNECT);
     }
+
+    public void regNewUser(String login, String password) throws IOException, RegException {
+        socket = new Socket(hostName, port);
+        out = new DataOutputStream(socket.getOutputStream());
+        in = new DataInputStream(socket.getInputStream());
+
+        sendMessage(String.format(REG_PATTERN, login, password));
+        String response = in.readUTF();
+        if (!response.equals(REG_SUCCESS_RESPONSE)) {
+            throw new RegException();
+        }
+    }
 }
