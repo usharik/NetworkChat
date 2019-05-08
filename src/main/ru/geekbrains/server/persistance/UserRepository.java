@@ -12,10 +12,12 @@ public class UserRepository {
 
     public UserRepository(Connection conn) throws SQLException {
         this.conn = conn;
-        //создать таблицу пользователей, если она еще не создана
-//        PreparedStatement prepareStatement = conn.prepareStatement
-//                ("create table if not exists users ( id int auto_increment primary key, login varchar(25), password varchar(25), unique index uq_login(login))");
-//        prepareStatement.execute();
+        //создать таблицу пользователей, если она еще не
+        if (!isTableExist("network_chat","users")) {
+        PreparedStatement prepareStatement = conn.prepareStatement
+                ("create table users ( id int auto_increment primary key, login varchar(25), password varchar(25), unique index uq_login(login))");
+        prepareStatement.execute();
+        }
     }
 
     public void insert(User user) throws SQLException {
@@ -58,6 +60,18 @@ public class UserRepository {
         PreparedStatement prepareStatement = conn.prepareStatement("select count(*) from users where login = ? and password = ?");
         prepareStatement.setString(1, user.getLogin());
         prepareStatement.setString(2, user.getPassword());
+        ResultSet resultSet = prepareStatement.executeQuery();
+        if (resultSet.next()) {
+            resultCount = resultSet.getInt(1);
+        }
+        resultSet.close();
+        return resultCount > 0;
+    }
+    public boolean isTableExist(String schemaName, String tableName) throws SQLException{
+        int resultCount = 0;
+        PreparedStatement prepareStatement = conn.prepareStatement("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?");
+        prepareStatement.setString(1, schemaName);
+        prepareStatement.setString(2, tableName);
         ResultSet resultSet = prepareStatement.executeQuery();
         if (resultSet.next()) {
             resultCount = resultSet.getInt(1);
