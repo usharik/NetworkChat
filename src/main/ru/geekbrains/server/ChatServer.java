@@ -16,8 +16,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
 
-import static ru.geekbrains.client.MessagePatterns.AUTH_FAIL_RESPONSE;
-import static ru.geekbrains.client.MessagePatterns.AUTH_SUCCESS_RESPONSE;
+import static ru.geekbrains.client.MessagePatterns.*;
 
 public class ChatServer {
 
@@ -27,8 +26,7 @@ public class ChatServer {
     public static void main(String[] args) {
         AuthService authService;
         try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/network_chat",
-                    "root", "root");
+            Connection conn = DriverManager.getConnection("jdbc:sqlite:C:\\sqlite\\users.db");
             UserRepository userRepository = new UserRepository(conn);
             authService = new AuthServiceJdbcImpl(userRepository);
         } catch (SQLException e) {
@@ -54,28 +52,39 @@ public class ChatServer {
                 System.out.println("New client connected!");
 
                 User user = null;
-                try {
-                    String authMessage = inp.readUTF();
-                    user = checkAuthentication(authMessage);
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                } catch (AuthException ex) {
-                    out.writeUTF(AUTH_FAIL_RESPONSE);
-                    out.flush();
-                    socket.close();
-                }
-                if (user != null && authService.authUser(user)) {
-                    System.out.printf("User %s authorized successful!%n", user.getLogin());
-                    subscribe(user.getLogin(), socket);
-                    out.writeUTF(AUTH_SUCCESS_RESPONSE);
-                    out.flush();
-                } else {
-                    if (user != null) {
-                        System.out.printf("Wrong authorization for user %s%n", user.getLogin());
+                String authMessage = inp.readUTF();
+                if (checker(authMessage)){
+                    try{
+                        user = checkAuthentication(authMessage);
+                    } catch (AuthException ex) {
+                        out.writeUTF(AUTH_FAIL_RESPONSE);
+                        out.flush();
+                        socket.close();
                     }
-                    out.writeUTF(AUTH_FAIL_RESPONSE);
-                    out.flush();
-                    socket.close();
+                    if (user != null && authService.authUser(user)) {
+                        System.out.printf("User %s authorized successful!%n", user.getLogin());
+                        subscribe(user.getLogin(), socket);
+                        out.writeUTF(AUTH_SUCCESS_RESPONSE);
+                        out.flush();
+                    } else if (user != null) {
+                        System.out.printf("Wrong authorization for user %s%n", user.getLogin());
+                        out.writeUTF(AUTH_FAIL_RESPONSE);
+                        out.flush();
+                        socket.close();
+                    }
+                } else {
+                    try {
+                        user = registration(authMessage);
+                        authService.regUser(user); //java.sql.SQLException: query does not return ResultSet
+                        //или org.sqlite.SQLiteException: [SQLITE_CONSTRAINT]  Abort due to constraint violation (
+                        //UNIQUE constraint failed: users.login)
+                        //код продолжает работу, но пока не реализовал проверку по бд на существующего пользователя
+                        System.out.printf("User %s registered successful!%n", user.getLogin());
+                        out.writeUTF(REG_SUCCESS_RESPONSE);
+                        out.flush();
+                    } catch (AuthException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         } catch (IOException ex) {
@@ -83,10 +92,26 @@ public class ChatServer {
         }
     }
 
+    private boolean checker(String authMessage){
+        String[] authParts = authMessage.split(" ");
+        boolean result = false;
+        if (authParts[0].equals("/auth")) result = true;
+        return  result;
+    }
+
     private User checkAuthentication(String authMessage) throws AuthException {
         String[] authParts = authMessage.split(" ");
         if (authParts.length != 3 || !authParts[0].equals("/auth")) {
             System.out.printf("Incorrect authorization message %s%n", authMessage);
+            throw new AuthException();
+        }
+        return new User(-1, authParts[1], authParts[2]);
+    }
+
+    private User registration(String regMessage) throws AuthException {
+        String[] authParts = regMessage.split(" ");
+        if (authParts.length != 3 || !authParts[0].equals("/reg")) {
+            System.out.printf("Incorrect registration message %s%n", regMessage);
             throw new AuthException();
         }
         return new User(-1, authParts[1], authParts[2]);

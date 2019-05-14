@@ -83,6 +83,17 @@ public class Network implements Closeable {
             throw new AuthException();
         }
     }
+    public void registration(String login, String password)throws IOException, AuthException{
+        socket = new Socket(hostName, port);
+        out = new DataOutputStream(socket.getOutputStream());
+        in = new DataInputStream(socket.getInputStream());
+
+        sendMessage(String.format(REG_PATTERN, login, password));
+        String response = in.readUTF();
+        if (!response.equals(REG_SUCCESS_RESPONSE)) {
+            throw new AuthException();
+        }
+    }
 
     public void sendTextMessage(TextMessage message) {
         sendMessage(String.format(MESSAGE_SEND_PATTERN, message.getUserTo(), message.getText()));
