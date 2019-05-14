@@ -27,8 +27,8 @@ public class ChatServer {
     public static void main(String[] args) {
         AuthService authService;
         try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/network_chat",
-                    "root", "root");
+            Connection conn = DriverManager.getConnection("jdbc:mysql://mysql-netchat:3306/network_chat",
+                    "networkchat", "Te9wCpnniF");
             UserRepository userRepository = new UserRepository(conn);
             authService = new AuthServiceJdbcImpl(userRepository);
         } catch (SQLException e) {
@@ -64,18 +64,22 @@ public class ChatServer {
                     out.flush();
                     socket.close();
                 }
-                if (user != null && authService.authUser(user)) {
-                    System.out.printf("User %s authorized successful!%n", user.getLogin());
-                    subscribe(user.getLogin(), socket);
-                    out.writeUTF(AUTH_SUCCESS_RESPONSE);
-                    out.flush();
-                } else {
-                    if (user != null) {
-                        System.out.printf("Wrong authorization for user %s%n", user.getLogin());
+                try {
+                    if (user != null && authService.authUser(user)) {
+                        System.out.printf("User %s authorized successful!%n", user.getLogin());
+                        subscribe(user.getLogin(), socket);
+                        out.writeUTF(AUTH_SUCCESS_RESPONSE);
+                        out.flush();
+                    } else {
+                        if (user != null) {
+                            System.out.printf("Wrong authorization for user %s%n", user.getLogin());
+                        }
+                        out.writeUTF(AUTH_FAIL_RESPONSE);
+                        out.flush();
+                        socket.close();
                     }
-                    out.writeUTF(AUTH_FAIL_RESPONSE);
-                    out.flush();
-                    socket.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
                 }
             }
         } catch (IOException ex) {
