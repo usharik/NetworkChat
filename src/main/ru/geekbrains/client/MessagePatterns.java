@@ -1,5 +1,6 @@
 package ru.geekbrains.client;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -31,6 +32,8 @@ public final class MessagePatterns {
 
     public static final Pattern MESSAGE_REC_PATTERN = Pattern.compile("^/w (\\w+) (.+)", Pattern.MULTILINE);
 
+    public static final Pattern LOG_REC_PATTERN = Pattern.compile("TextMessage\\{created=(.+), userFrom='(.+)', userTo='(.+)', text='(.+)'\\}", Pattern.MULTILINE);
+
     public static TextMessage parseTextMessageRegx(String text, String userTo) {
         Matcher matcher = MESSAGE_REC_PATTERN.matcher(text);
         if (matcher.matches()) {
@@ -38,6 +41,16 @@ public final class MessagePatterns {
                     matcher.group(2));
         } else {
             System.out.println("Not a text message pattern: " + text);
+            return null;
+        }
+    }
+
+    public static TextMessage parseLogRowRegx(String logRow) {
+        Matcher matcher = LOG_REC_PATTERN.matcher(logRow);
+        if (matcher.matches()) {
+            return new TextMessage(LocalDateTime.parse(matcher.group(1)), matcher.group(2), matcher.group(3), matcher.group(4));
+        } else {
+            System.out.println("Not a log row pattern: " + logRow);
             return null;
         }
     }
@@ -76,7 +89,7 @@ public final class MessagePatterns {
         String[] parts = text.split(" ");
         if (parts.length >= 1 && parts[0].equals(USER_LIST_TAG)) {
             Set<String> users = new HashSet<>();
-            for (int i=1; i<parts.length; i++) {
+            for (int i = 1; i < parts.length; i++) {
                 users.add(parts[i]);
             }
             return users;
