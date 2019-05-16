@@ -19,6 +19,13 @@ public class TextMessage {
         this.text = text;
     }
 
+    public TextMessage(LocalDateTime created, String userFrom, String userTo, String text) {
+        this.created = created;
+        this.userFrom = userFrom;
+        this.userTo = userTo;
+        this.text = text;
+    }
+
     public String getUserFrom() {
         return userFrom;
     }
@@ -41,6 +48,16 @@ public class TextMessage {
 
     public LocalDateTime getCreated() {
         return created;
+    }
+
+    @Override
+    public String toString() {
+        return "TextMessage{" +
+                "created=" + created +
+                ", userFrom='" + userFrom + '\'' +
+                ", userTo='" + userTo + '\'' +
+                ", text='" + text + '\'' +
+                '}';
     }
 
     /**

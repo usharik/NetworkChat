@@ -1,6 +1,7 @@
 package ru.geekbrains.server;
 
 import ru.geekbrains.client.AuthException;
+import ru.geekbrains.client.RegException;
 import ru.geekbrains.client.TextMessage;
 import ru.geekbrains.server.auth.AuthService;
 import ru.geekbrains.server.auth.AuthServiceJdbcImpl;
@@ -16,19 +17,18 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
 
-import static ru.geekbrains.client.MessagePatterns.AUTH_FAIL_RESPONSE;
-import static ru.geekbrains.client.MessagePatterns.AUTH_SUCCESS_RESPONSE;
+import static ru.geekbrains.client.MessagePatterns.*;
 
 public class ChatServer {
 
     private AuthService authService;
-    private Map<String, ClientHandler> clientHandlerMap = Collections.synchronizedMap(new HashMap<>());
+    private Map<String, ru.geekbrains.server.ClientHandler> clientHandlerMap = Collections.synchronizedMap(new HashMap<>());
 
     public static void main(String[] args) {
         AuthService authService;
         try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/network_chat",
-                    "root", "root");
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/network_chat?characterEncoding=utf8",
+                    "chatserver", "chatserver");
             UserRepository userRepository = new UserRepository(conn);
             if (userRepository.getAllUsers().size() == 0) {
                 userRepository.insert(new User(-1, "ivan", "123"));
@@ -58,16 +58,26 @@ public class ChatServer {
                 DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                 System.out.println("New client connected!");
 
-                User user = null;
+                ru.geekbrains.server.User user = null;
                 try {
                     String authMessage = inp.readUTF();
-                    user = checkAuthentication(authMessage);
+                    if (!isRegistration(authMessage)) {
+                        user = checkAuthentication(authMessage);
+                    }else {
+                        out.writeUTF(REG_SUCCESS_RESPONSE);
+                        out.flush();
+                        continue;
+                    }
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 } catch (AuthException ex) {
                     out.writeUTF(AUTH_FAIL_RESPONSE);
                     out.flush();
                     socket.close();
+                } catch (RegException e) {
+                    out.writeUTF(REG_FAIL_RESPONSE);
+                    out.flush();
+
                 }
                 if (user != null && authService.authUser(user)) {
                     System.out.printf("User %s authorized successful!%n", user.getLogin());
@@ -86,6 +96,27 @@ public class ChatServer {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * if message code = REG_TAG return TRUE (doesn't matter particular result of registration)
+     */
+    private boolean isRegistration(String authMessage) throws RegException {
+        String[] regParts = authMessage.split(" ");
+        boolean result = false;
+        if (regParts[0].equals(REG_TAG)) {
+            result = true;
+            //do registration
+            //if return RegException throw
+            if (!authService.regNewUser(new User(-1,regParts[1],regParts[2]))){
+                throw new RegException();
+            }
+            if (regParts.length != 3) {
+                System.out.printf("Incorrect registration message %s%n", authMessage);
+                throw new RegException();
+            }
+        }
+        return result;
     }
 
     private User checkAuthentication(String authMessage) throws AuthException {

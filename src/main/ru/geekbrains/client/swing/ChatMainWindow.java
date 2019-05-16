@@ -1,5 +1,6 @@
 package ru.geekbrains.client.swing;
 
+import ru.geekbrains.client.ChatLog;
 import ru.geekbrains.client.MessageReciever;
 import ru.geekbrains.client.Network;
 import ru.geekbrains.client.TextMessage;
@@ -10,7 +11,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Set;
+
+import static ru.geekbrains.client.MessagePatterns.*;
+
 
 public class ChatMainWindow extends JFrame implements MessageReciever {
 
@@ -34,9 +40,11 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
 
     private final Network network;
 
+    private final ChatLog chatLog;
+
     public ChatMainWindow() {
         setTitle("Сетевой чат.");
-        setBounds(200,200, 500, 500);
+        setBounds(200, 200, 500, 500);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         setLayout(new BorderLayout());
@@ -72,6 +80,11 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
                     messageListModel.add(messageListModel.size(), msg);
                     messageField.setText(null);
                     network.sendTextMessage(msg);
+                    try {
+                        chatLog.writeHistory(msg.toString());
+                    } catch (IOException er) {
+                        er.printStackTrace();
+                    }
                 }
             }
         });
@@ -111,6 +124,19 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
         });
 
         setTitle("Сетевой чат. Пользователь " + network.getLogin());
+        chatLog = new ChatLog(network.getLogin());
+        ArrayList<String> log;
+        try {
+            log = chatLog.getTail(100);
+        } catch (IOException e) {
+            e.printStackTrace();
+            log = new ArrayList<>();
+        }
+        for (String s : log) {
+            TextMessage msg = parseLogRowRegx(s);
+            messageListModel.add(messageListModel.size(), msg);
+            messageList.ensureIndexIsVisible(messageListModel.size() - 1);
+        }
     }
 
     @Override
@@ -120,6 +146,11 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
             public void run() {
                 messageListModel.add(messageListModel.size(), message);
                 messageList.ensureIndexIsVisible(messageListModel.size() - 1);
+                try {
+                    chatLog.writeHistory(message.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         });
     }
