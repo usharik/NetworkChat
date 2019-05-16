@@ -15,26 +15,12 @@ public class AuthServiceJdbcImpl implements AuthService {
 
     @Override
     public boolean authUser(User user) {
-        //авторизовать пользователя используя userRepository
-        boolean result = false;
         try {
-            result = userRepository.checkAuth(user);
+            User usr = userRepository.findByLogin(user.getLogin());
+            return usr.getId() > 0 && usr.getPassword().equals(user.getPassword());
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return result;
-    }
-
-    @Override
-    public boolean regNewUser(User user) {
-        boolean result = false;
-        try {
-            userRepository.insert(user);
-            result = true;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return result;
+        return false;
     }
 }
