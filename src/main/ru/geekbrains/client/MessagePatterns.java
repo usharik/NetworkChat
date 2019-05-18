@@ -1,5 +1,6 @@
 package ru.geekbrains.client;
 
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -30,6 +31,8 @@ public final class MessagePatterns {
     public static final String MESSAGE_SEND_PATTERN = MESSAGE_TAG + " %s %s";
 
     public static final Pattern MESSAGE_REC_PATTERN = Pattern.compile("^/w (\\w+) (.+)", Pattern.MULTILINE);
+
+    public static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public static TextMessage parseTextMessageRegx(String text, String userTo) {
         Matcher matcher = MESSAGE_REC_PATTERN.matcher(text);

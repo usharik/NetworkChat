@@ -1,6 +1,7 @@
 package ru.geekbrains.client;
 
 import java.time.LocalDateTime;
+import static ru.geekbrains.client.MessagePatterns.TIME_FORMATTER;
 
 public class TextMessage {
 
@@ -17,6 +18,13 @@ public class TextMessage {
         this.userFrom = userFrom;
         this.userTo = userTo;
         this.text = text;
+    }
+
+    public TextMessage(String userFrom, String userTo, String text, LocalDateTime created) {
+        this.userFrom = userFrom;
+        this.userTo = userTo;
+        this.text = text;
+        this.created = created;
     }
 
     public String getUserFrom() {
@@ -39,8 +47,8 @@ public class TextMessage {
         this.text = text;
     }
 
-    public LocalDateTime getCreated() {
-        return created;
+    public String getCreated() {
+        return created.format(TIME_FORMATTER);
     }
 
     /**

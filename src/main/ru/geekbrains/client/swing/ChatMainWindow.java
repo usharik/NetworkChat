@@ -1,5 +1,6 @@
 package ru.geekbrains.client.swing;
 
+import ru.geekbrains.client.MessageLogger;
 import ru.geekbrains.client.MessageReciever;
 import ru.geekbrains.client.Network;
 import ru.geekbrains.client.TextMessage;
@@ -10,7 +11,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
 import java.util.Set;
+import java.util.List;
 
 public class ChatMainWindow extends JFrame implements MessageReciever {
 
@@ -33,6 +36,8 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
     private final DefaultListModel<String> userListModel;
 
     private final Network network;
+
+    private MessageLogger messageLogger;
 
     public ChatMainWindow() {
         setTitle("Сетевой чат.");
@@ -72,6 +77,11 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
                     messageListModel.add(messageListModel.size(), msg);
                     messageField.setText(null);
                     network.sendTextMessage(msg);
+                    try {
+                        messageLogger.addToLog(msg);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                 }
             }
         });
@@ -100,6 +110,16 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
 
         this.network.requestConnectedUserList();
 
+        try {
+            this.messageLogger = new MessageLogger(network.getLogin());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        List<TextMessage> log = this.messageLogger.log();
+        for (TextMessage msg : log){
+            messageListModel.add(messageListModel.size(), msg);
+        }
+
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -111,6 +131,7 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
         });
 
         setTitle("Сетевой чат. Пользователь " + network.getLogin());
+
     }
 
     @Override
@@ -120,6 +141,11 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
             public void run() {
                 messageListModel.add(messageListModel.size(), message);
                 messageList.ensureIndexIsVisible(messageListModel.size() - 1);
+                try {
+                    messageLogger.addToLog(message);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         });
     }

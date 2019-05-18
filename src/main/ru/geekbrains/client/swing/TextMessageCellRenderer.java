@@ -4,11 +4,8 @@ import ru.geekbrains.client.TextMessage;
 
 import javax.swing.*;
 import java.awt.*;
-import java.time.format.DateTimeFormatter;
 
 public class TextMessageCellRenderer extends JPanel implements ListCellRenderer<TextMessage> {
-
-    private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     private final JLabel created;
 
@@ -46,7 +43,7 @@ public class TextMessageCellRenderer extends JPanel implements ListCellRenderer<
                                                   TextMessage value, int index,
                                                   boolean isSelected, boolean cellHasFocus) {
         setBackground(list.getBackground());
-        created.setText(value.getCreated().format(timeFormatter));
+        created.setText(value.getCreated());
         userName.setText(value.getUserFrom());
         messageText.setText(value.getText());
         return this;
