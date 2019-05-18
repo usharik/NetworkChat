@@ -3,8 +3,10 @@ package ru.geekbrains.client.swing;
 import ru.geekbrains.client.MessageReciever;
 import ru.geekbrains.client.Network;
 import ru.geekbrains.client.TextMessage;
+
 import ru.geekbrains.client.history.HistoryService;
 import ru.geekbrains.client.history.HistoryServiceImpl;
+
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,6 +16,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+
 import java.util.Set;
 
 public class ChatMainWindow extends JFrame implements MessageReciever {
@@ -38,9 +41,9 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
 
     private final Network network;
 
-    private HistoryService history;
 
     private final int COUNT_OF_MESSAGES = 10;
+
 
     public ChatMainWindow() {
         setTitle("Сетевой чат.");
@@ -83,6 +86,7 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
                     network.sendTextMessage(msg);
 
                     history.putMessage(msg);
+
                 }
             }
         });
@@ -114,12 +118,30 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
         fillChatWindowFromHistory();
 
         this.network.requestConnectedUserList();
+        try {
+            this.chatHistory = new ChatHistoryTextFileImpl(network.getLogin());
+        } catch (IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(ChatMainWindow.this,
+                    "Ошибка",
+                    "Не запускается сервис истории сообщений",
+                    JOptionPane.ERROR_MESSAGE);
+            System.exit(0);
+        }
+
+        List<TextMessage> lastMessages = this.chatHistory.getLastMessages(5);
+        for (TextMessage msg : lastMessages) {
+            messageListModel.add(messageListModel.size(), msg);
+        }
 
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 if (network != null) {
                     network.close();
+                }
+                if (chatHistory != null) {
+                    chatHistory.flush();
                 }
                 super.windowClosing(e);
             }
@@ -143,6 +165,7 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
             public void run() {
                 messageListModel.add(messageListModel.size(), message);
                 messageList.ensureIndexIsVisible(messageListModel.size() - 1);
+                chatHistory.addMessage(message);
             }
         });
     }

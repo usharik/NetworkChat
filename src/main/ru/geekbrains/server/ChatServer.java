@@ -29,6 +29,11 @@ public class ChatServer {
         try {
             Connection conn = DriverManager.getConnection("jdbc:sqlite:./db.db");
             UserRepository userRepository = new UserRepository(conn);
+            if (userRepository.getAllUsers().size() == 0) {
+                userRepository.insert(new User(-1, "ivan", "123"));
+                userRepository.insert(new User(-1, "petr", "345"));
+                userRepository.insert(new User(-1, "julia", "789"));
+            }
             authService = new AuthServiceJdbcImpl(userRepository);
         } catch (SQLException e) {
             e.printStackTrace();
