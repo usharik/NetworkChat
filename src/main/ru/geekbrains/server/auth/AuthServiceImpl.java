@@ -5,7 +5,7 @@ import ru.geekbrains.server.User;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AuthServiceImpl implements AuthService {
+public class AuthServiceImpl {
 
     public Map<String, String> users = new HashMap<>();
 
@@ -15,7 +15,6 @@ public class AuthServiceImpl implements AuthService {
         users.put("julia", "789");
     }
 
-    @Override
     public boolean authUser(User user) {
         String pwd = users.get(user.getLogin());
         return pwd != null && pwd.equals(user.getPassword());
