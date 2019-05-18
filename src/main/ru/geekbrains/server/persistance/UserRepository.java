@@ -2,10 +2,7 @@ package ru.geekbrains.server.persistance;
 
 import ru.geekbrains.server.User;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,37 +10,21 @@ public class UserRepository {
 
     private final Connection conn;
 
-    public UserRepository(Connection conn) {
+    public UserRepository(Connection conn) throws SQLException {
         this.conn = conn;
         // TODO создать таблицу пользователей, если она еще не создана
-        Statement stmt = null;
 
         try {
-            stmt = conn.createStatement();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return;
-        }
 
-        try {
-            ResultSet rs = stmt.executeQuery("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='users'");
-            while (rs.next()) {
-                if (rs.getInt(1) == 0) {
-                    // Создать таблицу пользователей.
-                    Statement updateStmt = conn.createStatement();
-                    int result = stmt.executeUpdate("CREATE TABLE \"users\" (\n" +
-                            "\t\"id\"\tINTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\n" +
-                            "\t\"login\"\tTEXT NOT NULL UNIQUE,\n" +
-                            "\t\"password\"\tTEXT NOT NULL DEFAULT ''\n" +
-                            ")");
+            Statement stmt = conn.createStatement();
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS \"users\" (\n" +
+                    "\t\"id\"\tINTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\n" +
+                    "\t\"login\"\tTEXT NOT NULL UNIQUE,\n" +
+                    "\t\"password\"\tTEXT NOT NULL DEFAULT ''\n" +
+                    ")");
 
-                    if (result == 1) {
-                        System.out.println("Таблица users создана.");
-                    }
-                } else System.out.println("Таблица пользователей существует, переходим к авторизации пользователя.");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -60,7 +41,11 @@ public class UserRepository {
         }
 
         try {
-            int result = updateStmt.executeUpdate(String.format("INSERT INTO users (login, password) VALUES ('%s', '%s')", user.getLogin(), user.getPassword()));
+            PreparedStatement insertStatement = conn.prepareStatement("INSERT INTO users (login, password) VALUES (?, ?)");
+            insertStatement.setString(1, user.getLogin());
+            insertStatement.setString(2, user.getPassword());
+            int result = insertStatement.executeUpdate();
+
             if (result == 1) {
                 System.out.println("Пользователель добавлен.");
             }
@@ -85,9 +70,12 @@ public class UserRepository {
             e.printStackTrace();
             return false;
         }
-        ResultSet rs = null;
+
         try {
-            rs = stmt.executeQuery(String.format("SELECT login FROM users WHERE login = '%s' AND password = '%s'", login, password));
+            PreparedStatement insertStatement = conn.prepareStatement("SELECT login FROM users WHERE login = ? AND password = ?");
+            insertStatement.setString(1, login);
+            insertStatement.setString(2, password);
+            ResultSet rs = insertStatement.executeQuery();
 
             while (rs.next()) {
                 result = true;
