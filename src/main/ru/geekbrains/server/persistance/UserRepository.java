@@ -77,6 +77,7 @@ public class UserRepository {
             insertStatement.setString(2, password);
             ResultSet rs = insertStatement.executeQuery();
 
+
             while (rs.next()) {
                 result = true;
             }
