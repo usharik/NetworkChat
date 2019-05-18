@@ -27,7 +27,7 @@ public class ChatServer {
     public static void main(String[] args) {
         AuthService authService;
         try {
-            Connection conn = DriverManager.getConnection("jdbc:sqlite:db.db");
+            Connection conn = DriverManager.getConnection("jdbc:sqlite:./db.db");
             UserRepository userRepository = new UserRepository(conn);
             authService = new AuthServiceJdbcImpl(userRepository);
         } catch (SQLException e) {
