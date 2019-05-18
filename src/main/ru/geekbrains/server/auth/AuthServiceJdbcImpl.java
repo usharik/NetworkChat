@@ -3,6 +3,8 @@ package ru.geekbrains.server.auth;
 import ru.geekbrains.server.User;
 import ru.geekbrains.server.persistance.UserRepository;
 
+import java.sql.SQLException;
+
 public class AuthServiceJdbcImpl implements AuthService {
 
     private final UserRepository userRepository;
