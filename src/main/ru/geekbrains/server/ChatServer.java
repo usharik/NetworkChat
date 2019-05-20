@@ -16,6 +16,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static ru.geekbrains.client.MessagePatterns.*;
 
@@ -23,6 +25,7 @@ public class ChatServer {
 
     private AuthService authService;
     private Map<String, ru.geekbrains.server.ClientHandler> clientHandlerMap = Collections.synchronizedMap(new HashMap<>());
+    private ExecutorService executorService;
 
     public static void main(String[] args) {
         AuthService authService;
@@ -46,7 +49,9 @@ public class ChatServer {
     }
 
     public ChatServer(AuthService authService) {
+
         this.authService = authService;
+        this.executorService = Executors.newFixedThreadPool(2);
     }
 
     private void start(int port) {
@@ -161,7 +166,7 @@ public class ChatServer {
 
     public void subscribe(String login, Socket socket) throws IOException {
         // TODO Проверить, подключен ли уже пользователь. Если да, то отправить клиенту ошибку
-        clientHandlerMap.put(login, new ClientHandler(login, socket, this));
+        clientHandlerMap.put(login, new ClientHandler(login, socket, executorService, this));
         sendUserConnectedMessage(login);
     }
 
