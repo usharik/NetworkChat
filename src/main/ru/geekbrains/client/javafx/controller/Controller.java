@@ -13,6 +13,7 @@ import ru.geekbrains.client.AuthException;
 import ru.geekbrains.client.MessageReciever;
 import ru.geekbrains.client.Network;
 import ru.geekbrains.client.TextMessage;
+import ru.geekbrains.client.history.ChatHistory;
 
 import java.io.IOException;
 import java.net.URL;
@@ -52,6 +53,7 @@ public class Controller implements Initializable, MessageReciever {
     private ObservableList<String> userList;
 
     private Network network;
+    private ChatHistory chatHistory;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
