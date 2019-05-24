@@ -7,6 +7,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Set;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import static ru.geekbrains.client.MessagePatterns.*;
 
@@ -16,17 +20,21 @@ public class ClientHandler {
     private final Socket socket;
     private final DataInputStream inp;
     private final DataOutputStream out;
-    private final Thread handleThread;
-    private ChatServer chatServer;
+    private final ExecutorService executorService;
+    private final Future<?> handlerFuture;
+    private final ChatServer chatServer;
 
-    public ClientHandler(String login, Socket socket, ChatServer chatServer) throws IOException {
+    private final BlockingDeque<String> messageQueue = new LinkedBlockingDeque<>();
+
+    public ClientHandler(String login, Socket socket, ExecutorService executorService, ChatServer chatServer) throws IOException {
         this.login = login;
         this.socket = socket;
         this.inp = new DataInputStream(socket.getInputStream());
         this.out = new DataOutputStream(socket.getOutputStream());
+        this.executorService = executorService;
         this.chatServer = chatServer;
 
-        this.handleThread = new Thread(new Runnable() {
+        this.handlerFuture = executorService.submit(new Runnable() {
             @Override
             public void run() {
                 while (!Thread.currentThread().isInterrupted()) {
@@ -55,8 +63,27 @@ public class ClientHandler {
                 }
             }
         });
-        this.chatServer = chatServer;
-        this.handleThread.start();
+
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                while (!Thread.currentThread().isInterrupted()) {
+                    String msg = null;
+                    try {
+                        msg = messageQueue.take();
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                    if (socket.isConnected()) {
+                        try {
+                            out.writeUTF(msg);
+                        } catch (IOException e) {
+                            return;
+                        }
+                    }
+                }
+            }
+        });
     }
 
     public String getLogin() {
@@ -64,9 +91,7 @@ public class ClientHandler {
     }
 
     public void sendMessage(String userFrom, String msg) throws IOException {
-        if (socket.isConnected()) {
-            out.writeUTF(String.format(MESSAGE_SEND_PATTERN, userFrom, msg));
-        }
+        messageQueue.add(String.format(MESSAGE_SEND_PATTERN, userFrom, msg));
     }
 
     public void sendConnectedMessage(String login) throws IOException {

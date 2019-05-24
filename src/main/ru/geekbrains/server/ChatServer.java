@@ -15,6 +15,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.*;
 
 import static ru.geekbrains.client.MessagePatterns.AUTH_FAIL_RESPONSE;
 import static ru.geekbrains.client.MessagePatterns.AUTH_SUCCESS_RESPONSE;
@@ -23,6 +24,27 @@ public class ChatServer {
 
     private AuthService authService;
     private Map<String, ClientHandler> clientHandlerMap = Collections.synchronizedMap(new HashMap<>());
+    private ExecutorService executorService = Executors.newFixedThreadPool(20, new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread thr = Executors.defaultThreadFactory().newThread(r);
+            thr.setDaemon(true);
+            return thr;
+        }
+    });
+
+    // ExecutorService с ограниченным числом потоков и ограниченной очередью заданий
+    private ExecutorService limitedExecutorService = new ThreadPoolExecutor(20, 20,
+            0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(100),
+            new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread thr = Executors.defaultThreadFactory().newThread(r);
+                    thr.setDaemon(true);
+                    return thr;
+                }
+            });
 
     public static void main(String[] args) {
         AuthService authService;
@@ -130,7 +152,7 @@ public class ChatServer {
 
     public void subscribe(String login, Socket socket) throws IOException {
         // TODO Проверить, подключен ли уже пользователь. Если да, то отправить клиенту ошибку
-        clientHandlerMap.put(login, new ClientHandler(login, socket, this));
+        clientHandlerMap.put(login, new ClientHandler(login, socket, executorService, this));
         sendUserConnectedMessage(login);
     }
 
