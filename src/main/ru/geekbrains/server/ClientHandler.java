@@ -7,6 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import static ru.geekbrains.client.MessagePatterns.*;
 
@@ -18,6 +19,7 @@ public class ClientHandler {
     private final DataOutputStream out;
     private final Thread handleThread;
     private ChatServer chatServer;
+    private static final Logger logger = Logger.getLogger(ChatServer.class.getName());
 
     public ClientHandler(String login, Socket socket, ChatServer chatServer) throws IOException {
         this.login = login;
@@ -32,19 +34,19 @@ public class ClientHandler {
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
                         String text = inp.readUTF();
-                        System.out.printf("Message from user %s: %s%n", login, text);
+                        logger.info("Message from user " + login + " " +text);
 
-                        System.out.println("New message " + text);
+                        logger.info("New message " + text);
                         TextMessage msg = parseTextMessageRegx(text, login);
                         if (msg != null) {
                             msg.swapUsers();
                             chatServer.sendMessage(msg);
                         } else if (text.equals(DISCONNECT)) {
-                            System.out.printf("User %s is disconnected%n", login);
+                            logger.info("User is disconnected. User name: " + login);
                             chatServer.unsubscribe(login);
                             return;
                         } else if (text.equals(USER_LIST_TAG)) {
-                            System.out.printf("Sending user list to %s%n", login);
+                            logger.info("Sending user list to " + login);
                             sendUserList(chatServer.getUserList());
                         }
                     } catch (IOException e) {

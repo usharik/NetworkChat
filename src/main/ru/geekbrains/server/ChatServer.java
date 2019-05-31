@@ -15,6 +15,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import static ru.geekbrains.client.MessagePatterns.AUTH_FAIL_RESPONSE;
 import static ru.geekbrains.client.MessagePatterns.AUTH_SUCCESS_RESPONSE;
@@ -23,12 +26,16 @@ public class ChatServer {
 
     private AuthService authService;
     private Map<String, ClientHandler> clientHandlerMap = Collections.synchronizedMap(new HashMap<>());
+    private static final Logger logger = Logger.getLogger(ChatServer.class.getName());
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        FileHandler fileHandler = new FileHandler("log_file.log", true);
+        logger.addHandler(fileHandler);
+        fileHandler.setFormatter(new SimpleFormatter());
+
         AuthService authService;
         try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/network_chat",
-                    "root", "root");
+            Connection conn = DriverManager.getConnection("jdbc:sqlite:C:\\sqlite\\users.db");
             UserRepository userRepository = new UserRepository(conn);
             if (userRepository.getAllUsers().size() == 0) {
                 userRepository.insert(new User(-1, "ivan", "123"));
@@ -51,12 +58,12 @@ public class ChatServer {
 
     private void start(int port) {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Server started!");
+            logger.info("Server started!");
             while (true) {
                 Socket socket = serverSocket.accept();
                 DataInputStream inp = new DataInputStream(socket.getInputStream());
                 DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-                System.out.println("New client connected!");
+                logger.info("New client connected!");
 
                 User user = null;
                 try {
@@ -70,13 +77,13 @@ public class ChatServer {
                     socket.close();
                 }
                 if (user != null && authService.authUser(user)) {
-                    System.out.printf("User %s authorized successful!%n", user.getLogin());
+                    logger.info("User authorized successful! User name: " + user.getLogin());
                     subscribe(user.getLogin(), socket);
                     out.writeUTF(AUTH_SUCCESS_RESPONSE);
                     out.flush();
                 } else {
                     if (user != null) {
-                        System.out.printf("Wrong authorization for user %s%n", user.getLogin());
+                        logger.info("Wrong authorization for user " + user.getLogin());
                     }
                     out.writeUTF(AUTH_FAIL_RESPONSE);
                     out.flush();
@@ -91,7 +98,7 @@ public class ChatServer {
     private User checkAuthentication(String authMessage) throws AuthException {
         String[] authParts = authMessage.split(" ");
         if (authParts.length != 3 || !authParts[0].equals("/auth")) {
-            System.out.printf("Incorrect authorization message %s%n", authMessage);
+            logger.info("Incorrect authorization message " + authMessage);
             throw new AuthException();
         }
         return new User(-1, authParts[1], authParts[2]);
@@ -100,7 +107,7 @@ public class ChatServer {
     private void sendUserConnectedMessage(String login) throws IOException {
         for (ClientHandler clientHandler : clientHandlerMap.values()) {
             if (!clientHandler.getLogin().equals(login)) {
-                System.out.printf("Sending connect notification to %s about %s%n", clientHandler.getLogin(), login);
+                logger.info("Sending connect notification to " + clientHandler.getLogin() + " about " + login);
                 clientHandler.sendConnectedMessage(login);
             }
         }
@@ -109,7 +116,7 @@ public class ChatServer {
     private void sendUserDisconnectedMessage(String login) throws IOException {
         for (ClientHandler clientHandler : clientHandlerMap.values()) {
             if (!clientHandler.getLogin().equals(login)) {
-                System.out.printf("Sending disconnect notification to %s about %s%n", clientHandler.getLogin(), login);
+                logger.info("Sending disconnect notification to " + clientHandler.getLogin() + " about " + login);
                 clientHandler.sendDisconnectedMessage(login);
             }
         }
@@ -120,7 +127,7 @@ public class ChatServer {
         if (userToClientHandler != null) {
             userToClientHandler.sendMessage(msg.getUserFrom(), msg.getText());
         } else {
-            System.out.printf("User %s not connected%n", msg.getUserTo());
+            logger.info("User not connected. Username: " + msg.getUserTo());
         }
     }
 
@@ -129,7 +136,6 @@ public class ChatServer {
     }
 
     public void subscribe(String login, Socket socket) throws IOException {
-        // TODO Проверить, подключен ли уже пользователь. Если да, то отправить клиенту ошибку
         clientHandlerMap.put(login, new ClientHandler(login, socket, this));
         sendUserConnectedMessage(login);
     }
@@ -139,7 +145,7 @@ public class ChatServer {
         try {
             sendUserDisconnectedMessage(login);
         } catch (IOException e) {
-            System.err.println("Error sending disconnect message");
+            logger.warning("Error sending disconnect message");
             e.printStackTrace();
         }
     }

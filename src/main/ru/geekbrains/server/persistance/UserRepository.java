@@ -51,12 +51,9 @@ public class UserRepository {
 
     private void createTableIfNotExists(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("create table if not exists users (\n" +
-                    "\tid int auto_increment primary key,\n" +
-                    "    login varchar(25),\n" +
-                    "    password varchar(25),\n" +
-                    "    unique index uq_login(login)\n" +
-                    ");");
+            stmt.execute("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n" +
+                    "       login VARCHAR(25) UNIQUE NOT NULL,\n" +
+                    "       password VARCHAR(25) NOT NULL);");
         }
     }
 }
