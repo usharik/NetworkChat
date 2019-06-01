@@ -1,5 +1,7 @@
-package ru.geekbrains.server;
+package main.ru.geekbrains.server;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import ru.geekbrains.client.AuthException;
 import ru.geekbrains.client.TextMessage;
 import ru.geekbrains.server.auth.AuthService;
@@ -23,6 +25,7 @@ public class ChatServer {
 
     private AuthService authService;
     private Map<String, ClientHandler> clientHandlerMap = Collections.synchronizedMap(new HashMap<>());
+    private static final Logger LOGGER = LogManager.getLogger(ChatServer.class);
 
     public static void main(String[] args) {
         AuthService authService;
@@ -37,7 +40,8 @@ public class ChatServer {
             }
             authService = new AuthServiceJdbcImpl(userRepository);
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.error(e);
+
             return;
         }
 
@@ -63,28 +67,41 @@ public class ChatServer {
                     String authMessage = inp.readUTF();
                     user = checkAuthentication(authMessage);
                 } catch (IOException ex) {
-                    ex.printStackTrace();
+                    //ex.printStackTrace();
+
+                    LOGGER.error(ex);
                 } catch (AuthException ex) {
                     out.writeUTF(AUTH_FAIL_RESPONSE);
                     out.flush();
                     socket.close();
+
+                    LOGGER.info(AUTH_FAIL_RESPONSE);
                 }
                 if (user != null && authService.authUser(user)) {
-                    System.out.printf("User %s authorized successful!%n", user.getLogin());
+                    String succesMsg = "User %s authorized successful!%n", user.getLogin();
+                    System.out.printf(succesMsg);
                     subscribe(user.getLogin(), socket);
                     out.writeUTF(AUTH_SUCCESS_RESPONSE);
                     out.flush();
+
+                    LOGGER.info(succesMsg);
                 } else {
+                    String failMsg = AUTH_FAIL_RESPONSE;
                     if (user != null) {
-                        System.out.printf("Wrong authorization for user %s%n", user.getLogin());
+                        failMsg = "Wrong authorization for user %s%n", user.getLogin();
+                        System.out.printf(failMsg);
                     }
                     out.writeUTF(AUTH_FAIL_RESPONSE);
                     out.flush();
                     socket.close();
+
+                    LOGGER.info(failMsg);
                 }
             }
         } catch (IOException ex) {
-            ex.printStackTrace();
+            //ex.printStackTrace();
+
+            LOGGER.error(ex);
         }
     }
 
@@ -120,7 +137,10 @@ public class ChatServer {
         if (userToClientHandler != null) {
             userToClientHandler.sendMessage(msg.getUserFrom(), msg.getText());
         } else {
-            System.out.printf("User %s not connected%n", msg.getUserTo());
+            String msgToUser = "User %s not connected%n", msg.getUserTo();
+            System.out.printf(msgToUser);
+
+            LOGGER.warn(msgToUser);
         }
     }
 
@@ -139,8 +159,10 @@ public class ChatServer {
         try {
             sendUserDisconnectedMessage(login);
         } catch (IOException e) {
-            System.err.println("Error sending disconnect message");
-            e.printStackTrace();
+            String s = "Error sending disconnect message";
+            System.err.println(s);
+            //e.printStackTrace();
+            LOGGER.error(s);
         }
     }
 }
