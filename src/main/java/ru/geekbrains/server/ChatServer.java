@@ -1,55 +1,33 @@
 package ru.geekbrains.server;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import ru.geekbrains.client.AuthException;
 import ru.geekbrains.client.TextMessage;
 import ru.geekbrains.server.auth.AuthService;
-import ru.geekbrains.server.auth.AuthServiceJdbcImpl;
-import ru.geekbrains.server.persistance.UserRepository;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.*;
 
 import static ru.geekbrains.client.MessagePatterns.AUTH_FAIL_RESPONSE;
 import static ru.geekbrains.client.MessagePatterns.AUTH_SUCCESS_RESPONSE;
 
+@Component("chatServer")
 public class ChatServer {
 
     private AuthService authService;
     private Map<String, ClientHandler> clientHandlerMap = Collections.synchronizedMap(new HashMap<>());
 
-    public static void main(String[] args) {
-        AuthService authService;
-        try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/network_chat",
-                    "root", "root");
-            UserRepository userRepository = new UserRepository(conn);
-            if (userRepository.getAllUsers().size() == 0) {
-                userRepository.insert(new User(-1, "ivan", "123"));
-                userRepository.insert(new User(-1, "petr", "345"));
-                userRepository.insert(new User(-1, "julia", "789"));
-            }
-            authService = new AuthServiceJdbcImpl(userRepository);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return;
-        }
-
-        ChatServer chatServer = new ChatServer(authService);
-        chatServer.start(7777);
-    }
-
+    @Autowired
     public ChatServer(AuthService authService) {
         this.authService = authService;
     }
 
-    private void start(int port) {
+    public void start(int port) {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Server started!");
             while (true) {

@@ -1,11 +1,15 @@
 package ru.geekbrains.server.persistance;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import ru.geekbrains.server.User;
 
+import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+@Component("userRepository")
 public class UserRepository {
 
     private final Connection conn;
@@ -13,6 +17,19 @@ public class UserRepository {
     public UserRepository(Connection conn) throws SQLException {
         this.conn = conn;
         createTableIfNotExists(conn);
+    }
+
+    @Autowired
+    public UserRepository(DataSource dataSource) throws SQLException {
+        this(dataSource.getConnection());
+    }
+
+    public void initData() throws SQLException {
+        if (this.getAllUsers().size() == 0) {
+            this.insert(new User(-1, "ivan", "123"));
+            this.insert(new User(-1, "petr", "345"));
+            this.insert(new User(-1, "julia", "789"));
+        }
     }
 
     public void insert(User user) throws SQLException {

@@ -1,10 +1,12 @@
 package ru.geekbrains.server.auth;
 
+import org.springframework.stereotype.Component;
 import ru.geekbrains.server.User;
 import ru.geekbrains.server.persistance.UserRepository;
 
 import java.sql.SQLException;
 
+@Component("authService")
 public class AuthServiceJdbcImpl implements AuthService {
 
     private final UserRepository userRepository;

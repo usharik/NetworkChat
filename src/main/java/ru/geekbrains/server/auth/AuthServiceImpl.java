@@ -1,5 +1,6 @@
 package ru.geekbrains.server.auth;
 
+import org.springframework.stereotype.Component;
 import ru.geekbrains.server.User;
 
 import java.util.HashMap;
