@@ -3,8 +3,10 @@ package ru.geekbrains.client.swing;
 import ru.geekbrains.client.MessageReciever;
 import ru.geekbrains.client.Network;
 import ru.geekbrains.client.TextMessage;
-import ru.geekbrains.client.history.ChatHistory;
-import ru.geekbrains.client.history.ChatHistoryTextFileImpl;
+
+import ru.geekbrains.client.history.HistoryService;
+import ru.geekbrains.client.history.HistoryServiceImpl;
+
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,8 +14,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.IOException;
-import java.util.List;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+
 import java.util.Set;
 
 public class ChatMainWindow extends JFrame implements MessageReciever {
@@ -38,11 +41,13 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
 
     private final Network network;
 
-    private ChatHistory chatHistory;
+
+    private final int COUNT_OF_MESSAGES = 10;
+
 
     public ChatMainWindow() {
         setTitle("Сетевой чат.");
-        setBounds(200,200, 500, 500);
+        setBounds(200, 200, 500, 500);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         setLayout(new BorderLayout());
@@ -72,13 +77,16 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
                             "Ошибка",
                             "Не выбран пользователь",
                             JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
                 if (text != null && !text.trim().isEmpty()) {
                     TextMessage msg = new TextMessage(network.getLogin(), userTo, text);
                     messageListModel.add(messageListModel.size(), msg);
                     messageField.setText(null);
                     network.sendTextMessage(msg);
-                    chatHistory.addMessage(msg);
+
+                    history.putMessage(msg);
+
                 }
             }
         });
@@ -104,6 +112,10 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
         if (!loginDialog.isConnected()) {
             System.exit(0);
         }
+
+        this.history = new HistoryServiceImpl(network.getLogin());
+
+        fillChatWindowFromHistory();
 
         this.network.requestConnectedUserList();
         try {
@@ -136,6 +148,14 @@ public class ChatMainWindow extends JFrame implements MessageReciever {
         });
 
         setTitle("Сетевой чат. Пользователь " + network.getLogin());
+    }
+
+    private void fillChatWindowFromHistory() {
+        ArrayList<TextMessage> historyTextMessages = history.getLastMessages(COUNT_OF_MESSAGES);
+
+        for (TextMessage msg : historyTextMessages) {
+            this.submitMessage(msg);
+        }
     }
 
     @Override

@@ -12,51 +12,114 @@ public class UserRepository {
 
     public UserRepository(Connection conn) throws SQLException {
         this.conn = conn;
-        createTableIfNotExists(conn);
-    }
+        // TODO создать таблицу пользователей, если она еще не создана
 
-    public void insert(User user) throws SQLException {
-        try (PreparedStatement stmt = conn.prepareStatement(
-                "insert into users(login, password) values (?, ?);")) {
-            stmt.setString(1, user.getLogin());
-            stmt.setString(2, user.getPassword());
-            stmt.execute();
+        try {
+
+            Statement stmt = conn.createStatement();
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS \"users\" (\n" +
+                    "\t\"id\"\tINTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\n" +
+                    "\t\"login\"\tTEXT NOT NULL UNIQUE,\n" +
+                    "\t\"password\"\tTEXT NOT NULL DEFAULT ''\n" +
+                    ")");
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
     }
 
-    public User findByLogin(String login) throws SQLException {
-        try (PreparedStatement stmt = conn.prepareStatement(
-                "select id, login, password from users where login = ?")) {
-            stmt.setString(1, login);
-            ResultSet rs = stmt.executeQuery();
+    public void insert(User user) {
+        // TODO добавить нового пользователя в БД
 
-            if (rs.next()) {
-                return new User(rs.getInt(1), rs.getString(2), rs.getString(3));
+        Statement updateStmt = null;
+        try {
+            updateStmt = conn.createStatement();
+        } catch (SQLException e) {
+            e.printStackTrace();
+
+            return;
+        }
+
+        try {
+            PreparedStatement insertStatement = conn.prepareStatement("INSERT INTO users (login, password) VALUES (?, ?)");
+            insertStatement.setString(1, user.getLogin());
+            insertStatement.setString(2, user.getPassword());
+            int result = insertStatement.executeUpdate();
+
+            if (result == 1) {
+                System.out.println("Пользователель добавлен.");
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-        return new User(-1, "", "");
+
     }
 
-    public List<User> getAllUsers() throws SQLException {
-        List<User> res = new ArrayList<>();
-        try (Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select id, login, password from users");
+    public boolean authByLoginPassword(String login, String password) {
+        // TODO найти пользователя в БД по логину
+        // DONE
+
+        // Сделал простенькую авторизацию по логину-паролю.
+
+        boolean result = false;
+
+        Statement stmt = null;
+        try {
+            stmt = conn.createStatement();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        try {
+            PreparedStatement insertStatement = conn.prepareStatement("SELECT login FROM users WHERE login = ? AND password = ?");
+            insertStatement.setString(1, login);
+            insertStatement.setString(2, password);
+            ResultSet rs = insertStatement.executeQuery();
+
 
             while (rs.next()) {
-                res.add(new User(rs.getInt(1), rs.getString(2), rs.getString(3)));
+                result = true;
             }
+
+            return result;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+
+            return false;
         }
-        return res;
     }
 
-    private void createTableIfNotExists(Connection conn) throws SQLException {
-        try (Statement stmt = conn.createStatement()) {
-            stmt.execute("create table if not exists users (\n" +
-                    "\tid int auto_increment primary key,\n" +
-                    "    login varchar(25),\n" +
-                    "    password varchar(25),\n" +
-                    "    unique index uq_login(login)\n" +
-                    ");");
+    public List<User> getAllUsers() {
+        // TODO извлечь из БД полный список пользователей
+        // DONE
+
+        // Не совсем понял зачем извлекать весь список пользователей, а если их 1 млрд? ...
+
+        List<User> allUsers = new ArrayList();
+
+        Statement stmt = null;
+        try {
+            stmt = conn.createStatement();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
         }
+        ResultSet rs = null;
+        try {
+            rs = stmt.executeQuery("SELECT id, login, password FROM users");
+
+            while (rs.next()) {
+                allUsers.add(new User(rs.getInt(1), rs.getString(2), rs.getString(3)));
+            }
+
+            return allUsers;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+
     }
 }
